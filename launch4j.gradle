@@ -1,11 +1,12 @@
 /**
- * Copyright (c) 2017 Oracle Corporation. All rights reserved.
+ * CMD ADAPTER - Command Line Task Driver
  *
- * This material is the confidential property of Oracle Corporation. or its
- * subsidiaries or licensors and may be used, reproduced, stored or transmitted
- * only in accordance with a valid Oracle license or sublicense agreement.
+ *  Copyright 2016 by Chad Juliano
  *
- * $Id: 29565e145c1d9c03ddfea55cb38012bb83c9dad1 $
+ *  Licensed under GNU Lesser General Public License v3.0 only.
+ *  Some rights reserved. See LICENSE.
+ *
+ * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
 
 buildscript {
@@ -19,7 +20,9 @@ buildscript {
 	}
 }
 
-apply plugin: 'distribution'
+// The application plugin adds a set of tasks for script generation and distribution
+// https://docs.gradle.org/current/userguide/application_plugin.html
+apply plugin: 'application'
 
 // plugin to build the launch4j executable.
 apply plugin: edu.sc.seis.launch4j.Launch4jPlugin
@@ -27,45 +30,45 @@ apply plugin: edu.sc.seis.launch4j.Launch4jPlugin
 // For the versioning plugin to work the root project must contain a .git directory.
 apply plugin: net.nemerosa.versioning.VersioningPlugin
 
-
-ext {
-	Date buildTimeAndDate = new Date()
-    buildDate = new java.text.SimpleDateFormat('yyyy-MM-dd').format(buildTimeAndDate)
-    buildTime = new java.text.SimpleDateFormat('HH:mm:ss.SSSZ').format(buildTimeAndDate)
-
-    buildJVM = String.format('%s (%s %s)',
-    		System.properties['java.version'],
-    		System.properties['java.vendor'],
-    		System.properties['java.vm.version'])
-
-    buildUser = System.properties['user.name']
-}
-
-
+// JAR pluigin
+// https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Jar.html
 jar {
-	doFirst { manifest.attributes.sort().each { println "JAR: ${it}" } }
+	Date buildTimeAndDate = new Date()
+    def buildDate = new java.text.SimpleDateFormat('yyyy-MM-dd').format(buildTimeAndDate)
+    def buildTime = new java.text.SimpleDateFormat('HH:mm:ss.SSSZ').format(buildTimeAndDate)
+    def buildJVM = String.format('%s (%s %s)',
+    	System.properties['java.version'],
+    	System.properties['java.vendor'],
+    	System.properties['java.vm.version'])
+    def buildUser = System.properties['user.name']
+
+    excludes = [ 'logback.xml' ]
+
     manifest {
         attributes (
-            'Built-By': project.buildUser,
-            'Created-By': project.buildJVM,
-            'Build-Date': project.buildDate,
-            'Build-Time': project.buildTime,
+            'Built-By': buildUser,
+            'Created-By': buildJVM,
+            'Build-Date': buildDate,
+            'Build-Time': buildTime,
             'Build-Revision': versioning.info.commit,
             'Specification-Title': project.description,
             'Specification-Version': project.version,
             'Implementation-Title': project.programName,
             'Implementation-Version': project.version,
-            'Main-Class': project.mainClass )
+            'Main-Class': project.mainClassName )
     }
+
+	doFirst { manifest.attributes.sort().each { println "MANIFEST: ${it}" } }
 }
 
-
+// launch4j plugin
+// https://github.com/TheBoegl/gradle-launch4j
 task createLaunch4j(type: edu.sc.seis.launch4j.tasks.Launch4jLibraryTask) {
     group = 'launch4j'
     description = "Create the ${outfile} launcher."
 
     outfile = "${project.programName}.exe"
-    mainClassName = project.mainClass
+    mainClassName = project.mainClassName
     fileDescription = project.description
     icon = "${projectDir}/${project.programIcon}"
     headerType = 'console'
@@ -74,23 +77,34 @@ task createLaunch4j(type: edu.sc.seis.launch4j.tasks.Launch4jLibraryTask) {
     textVersion = project.version
 }
 
+//createLaunch4j {
+//  copyConfigurable = project.copySpec {
+//      from configurations.runtime.files
+//      from project.jar.outputs.files
+//  	from(project.eceServerDir) { include 'config/diameter/*.xml' }
+//  }
+//}
 
 // required for the ant filter in copy
 import org.apache.tools.ant.filters.LineContains
 
-task createStartScripts(type: CreateStartScripts) {
+// added by the application plugin
+// https://docs.gradle.org/current/userguide/application_plugin.html
+// also see CopySpec
+// https://docs.gradle.org/current/javadoc/org/gradle/api/file/CopySpec.html
+startScripts {
 	group = 'distribution'
 	description = "Create the ${project.programName} launch scripts."
 
 	outputDir = new File(project.buildDir, 'scripts')
-	mainClassName = project.mainClass
+	mainClassName = project.mainClassName
 	applicationName = project.programName
 	classpath = files(configurations.runtime, jar.outputs)
 
 	doLast {
 		copy {
-            from createStartScripts.outputDir
-            into createStartScripts.outputDir
+            from outputDir
+            into outputDir
 
             // the new file should have the *.sh extension
             include project.programName
@@ -103,18 +117,25 @@ task createStartScripts(type: CreateStartScripts) {
 	}
 }
 
+// from the distributino plugin. Add some files to the 'top' distribution.
+// https://docs.gradle.org/current/userguide/distribution_plugin.html
+distributions {
+    top {
+    	contents {
+            from(createLaunch4j.outputs) {  include '*.exe' }
+            from(startScripts.outputs) {
+            	include '*.sh'
+            	fileMode 0755
+            }
+        }
 
-// stuff below is just for debugging
-//
-distZip {
-	doFirst { println "ZIP: ${archivePath}" }
+        contents.eachFile() { file -> println "DIST: ${file.path}" }
+    }
 }
 
-
-installDist {
- eachFile { file -> println "COPY: ${relativePath(new File(destinationDir, file.path))}" }
-}
-
+/**
+ * stuff below is just for debugging
+ */
 task helpLaunch4j {
 	group = 'launch4j'
 	description = 'List some details of createLaunch4j'
