@@ -1,0 +1,148 @@
+/**
+ * Copyright (c) 2017 Oracle Corporation. All rights reserved.
+ *
+ * This material is the confidential property of Oracle Corporation. or its
+ * subsidiaries or licensors and may be used, reproduced, stored or transmitted
+ * only in accordance with a valid Oracle license or sublicense agreement.
+ *
+ * $Id: 29565e145c1d9c03ddfea55cb38012bb83c9dad1 $
+ */
+
+buildscript {
+	repositories {
+	    jcenter()
+	}
+
+	dependencies {
+		classpath group: 'edu.sc.seis.gradle', name: 'launch4j', version: '2.3.0'
+		classpath group: 'net.nemerosa', name: 'versioning', version: '2.5.1'
+	}
+}
+
+apply plugin: 'distribution'
+
+// plugin to build the launch4j executable.
+apply plugin: edu.sc.seis.launch4j.Launch4jPlugin
+
+// For the versioning plugin to work the root project must contain a .git directory.
+apply plugin: net.nemerosa.versioning.VersioningPlugin
+
+
+ext {
+	Date buildTimeAndDate = new Date()
+    buildDate = new java.text.SimpleDateFormat('yyyy-MM-dd').format(buildTimeAndDate)
+    buildTime = new java.text.SimpleDateFormat('HH:mm:ss.SSSZ').format(buildTimeAndDate)
+
+    buildJVM = String.format('%s (%s %s)',
+    		System.properties['java.version'],
+    		System.properties['java.vendor'],
+    		System.properties['java.vm.version'])
+
+    buildUser = System.properties['user.name']
+}
+
+
+jar {
+	doFirst { manifest.attributes.sort().each { println "JAR: ${it}" } }
+    manifest {
+        attributes (
+            'Built-By': project.buildUser,
+            'Created-By': project.buildJVM,
+            'Build-Date': project.buildDate,
+            'Build-Time': project.buildTime,
+            'Build-Revision': versioning.info.commit,
+            'Specification-Title': project.description,
+            'Specification-Version': project.version,
+            'Implementation-Title': project.programName,
+            'Implementation-Version': project.version,
+            'Main-Class': project.mainClass )
+    }
+}
+
+
+task createLaunch4j(type: edu.sc.seis.launch4j.tasks.Launch4jLibraryTask) {
+    group = 'launch4j'
+    description = "Create the ${outfile} launcher."
+
+    outfile = "${project.programName}.exe"
+    mainClassName = project.mainClass
+    fileDescription = project.description
+    icon = "${projectDir}/${project.programIcon}"
+    headerType = 'console'
+    copyright = project.copyright
+    dontWrapJar = true
+    textVersion = project.version
+}
+
+
+// required for the ant filter in copy
+import org.apache.tools.ant.filters.LineContains
+
+task createStartScripts(type: CreateStartScripts) {
+	group = 'distribution'
+	description = "Create the ${project.programName} launch scripts."
+
+	outputDir = new File(project.buildDir, 'scripts')
+	mainClassName = project.mainClass
+	applicationName = project.programName
+	classpath = files(configurations.runtime, jar.outputs)
+
+	doLast {
+		copy {
+            from createStartScripts.outputDir
+            into createStartScripts.outputDir
+
+            // the new file should have the *.sh extension
+            include project.programName
+        	rename project.programName, "${project.programName}.sh"
+
+            // we need to remove this line to make the script work:
+            //     cd "`dirname \"$PRG\"`/.." >/dev/null
+            filter(LineContains, contains:['dirname \\"$PRG\\"`/.."'], negate:'true')
+		}
+	}
+}
+
+
+// stuff below is just for debugging
+//
+distZip {
+	doFirst { println "ZIP: ${archivePath}" }
+}
+
+
+installDist {
+ eachFile { file -> println "COPY: ${relativePath(new File(destinationDir, file.path))}" }
+}
+
+task helpLaunch4j {
+	group = 'launch4j'
+	description = 'List some details of createLaunch4j'
+
+	doLast {
+		//createLaunch4j.properties.sort().each { println "properties: ${it}" }
+		configurations.runtime.sort().each { println "orig: ${it}" }
+
+		def outputDir = createLaunch4j.outputDirectory.toPath()
+		println "outputDir: ${outputDir}"
+
+		def libraryDir = createLaunch4j.libraryDirectory.toString()
+		println "libraryDirectory: ${libraryDir}"
+
+		def outFilePath = createLaunch4j.dest.parentFile.toPath()
+		println "outFilePath: ${outFilePath}"
+
+		FileCollection _copyLibraries = createLaunch4j.copyLibraries()
+		_copyLibraries.each { println "copyLibraries: ${it}" }
+	}
+}
+
+task listClasspath {
+	group = 'help'
+	description = 'List the runtime classpaths.'
+
+	doLast {
+		sourceSets.main.resources.collect{ relativePath(it) }.sort().each { println "resource: ${it}" }
+		configurations.runtime.collect{ relativePath(it) }.sort().each { println "classpath: ${it}" }
+	}
+}
