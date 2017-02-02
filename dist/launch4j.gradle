@@ -1,12 +1,5 @@
 /**
- * CMD ADAPTER - Command Line Task Driver
- *
- *  Copyright 2016 by Chad Juliano
- *
- *  Licensed under GNU Lesser General Public License v3.0 only.
- *  Some rights reserved. See LICENSE.
- *
- * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
+ * $Id: 29565e145c1d9c03ddfea55cb38012bb83c9dad1 $
  */
 
 buildscript {
@@ -20,8 +13,10 @@ buildscript {
 	}
 }
 
-// The application plugin adds a set of tasks for script generation and distribution
-// https://docs.gradle.org/current/userguide/application_plugin.html
+/**
+ * The application plugin adds a set of tasks for script generation and distribution.
+ * https://docs.gradle.org/current/userguide/application_plugin.html
+ */
 apply plugin: 'application'
 
 // plugin to build the launch4j executable.
@@ -30,8 +25,18 @@ apply plugin: edu.sc.seis.launch4j.Launch4jPlugin
 // For the versioning plugin to work the root project must contain a .git directory.
 apply plugin: net.nemerosa.versioning.VersioningPlugin
 
-// JAR pluigin
-// https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Jar.html
+/**
+ * Add an extension variable for the config directory.
+ */
+ext {
+	distDir = file('dist', PathValidation.DIRECTORY )
+	loggingDir = file('logging', PathValidation.DIRECTORY )
+}
+
+/**
+ * JAR pluigin.
+ * https://docs.gradle.org/current/dsl/org.gradle.api.tasks.bundling.Jar.html
+ */
 jar {
 	Date buildTimeAndDate = new Date()
     def buildDate = new java.text.SimpleDateFormat('yyyy-MM-dd').format(buildTimeAndDate)
@@ -41,8 +46,6 @@ jar {
     	System.properties['java.vendor'],
     	System.properties['java.vm.version'])
     def buildUser = System.properties['user.name']
-
-    excludes = [ 'logback.xml' ]
 
     manifest {
         attributes (
@@ -58,11 +61,19 @@ jar {
             'Main-Class': project.mainClassName )
     }
 
+    metaInf {
+    	from(project.projectDir) {
+    		include 'LICENSE*'
+    	}
+    }
+
 	doFirst { manifest.attributes.sort().each { println "MANIFEST: ${it}" } }
 }
 
-// launch4j plugin
-// https://github.com/TheBoegl/gradle-launch4j
+/**
+ * Launch4j plugin.
+ * https://github.com/TheBoegl/gradle-launch4j
+ */
 task createLaunch4j(type: edu.sc.seis.launch4j.tasks.Launch4jLibraryTask) {
     group = 'launch4j'
     description = "Create the ${outfile} launcher."
@@ -77,21 +88,15 @@ task createLaunch4j(type: edu.sc.seis.launch4j.tasks.Launch4jLibraryTask) {
     textVersion = project.version
 }
 
-//createLaunch4j {
-//  copyConfigurable = project.copySpec {
-//      from configurations.runtime.files
-//      from project.jar.outputs.files
-//  	from(project.eceServerDir) { include 'config/diameter/*.xml' }
-//  }
-//}
-
 // required for the ant filter in copy
 import org.apache.tools.ant.filters.LineContains
 
-// added by the application plugin
-// https://docs.gradle.org/current/userguide/application_plugin.html
-// also see CopySpec
-// https://docs.gradle.org/current/javadoc/org/gradle/api/file/CopySpec.html
+/**
+ * This block is added by the application plugin:
+ * https://docs.gradle.org/current/userguide/application_plugin.html
+ * Also see CopySpec:
+ * https://docs.gradle.org/current/javadoc/org/gradle/api/file/CopySpec.html
+ */
 startScripts {
 	group = 'distribution'
 	description = "Create the ${project.programName} launch scripts."
@@ -117,53 +122,26 @@ startScripts {
 	}
 }
 
-// from the distributino plugin. Add some files to the 'top' distribution.
-// https://docs.gradle.org/current/userguide/distribution_plugin.html
+/**
+ * The below block determines the files that get copied into the distribution.
+ * We create a new distribution called 'launch4j' because 'main' has a different organization.
+ * https://docs.gradle.org/current/userguide/distribution_plugin.html
+ */
 distributions {
-    top {
+    launch4j {
+        baseName = project.name
     	contents {
+            from(project.distDir) {
+            	include 'README.*'
+            }
             from(createLaunch4j.outputs) {  include '*.exe' }
             from(startScripts.outputs) {
             	include '*.sh'
             	fileMode 0755
             }
+            into('lib/config') {
+            	from(project.loggingDir) { include 'logback.xml' }
+            }
         }
-
-        contents.eachFile() { file -> println "DIST: ${file.path}" }
     }
-}
-
-/**
- * stuff below is just for debugging
- */
-task helpLaunch4j {
-	group = 'launch4j'
-	description = 'List some details of createLaunch4j'
-
-	doLast {
-		//createLaunch4j.properties.sort().each { println "properties: ${it}" }
-		configurations.runtime.sort().each { println "orig: ${it}" }
-
-		def outputDir = createLaunch4j.outputDirectory.toPath()
-		println "outputDir: ${outputDir}"
-
-		def libraryDir = createLaunch4j.libraryDirectory.toString()
-		println "libraryDirectory: ${libraryDir}"
-
-		def outFilePath = createLaunch4j.dest.parentFile.toPath()
-		println "outFilePath: ${outFilePath}"
-
-		FileCollection _copyLibraries = createLaunch4j.copyLibraries()
-		_copyLibraries.each { println "copyLibraries: ${it}" }
-	}
-}
-
-task listClasspath {
-	group = 'help'
-	description = 'List the runtime classpaths.'
-
-	doLast {
-		sourceSets.main.resources.collect{ relativePath(it) }.sort().each { println "resource: ${it}" }
-		configurations.runtime.collect{ relativePath(it) }.sort().each { println "classpath: ${it}" }
-	}
 }

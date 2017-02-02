@@ -1,5 +1,5 @@
 /**
- * CMD ADAPTER - Command Line Task Driver
+ * TASK DRIVER - Command-line Task Framework
  *
  *  Copyright 2016 by Chad Juliano
  *
@@ -9,12 +9,14 @@
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
 
-package org.oracp.cmd;
+package org.taskdriver;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 import org.apache.commons.cli.CommandLine;
@@ -26,30 +28,29 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.oracp.cmd.CmdlineTaskMap.CmdlineTask;
+import org.taskdriver.TaskDriverMap.TaskDefinition;
 
 import ch.qos.logback.classic.Level;
 
-public abstract class CmdlineAdapter
+public abstract class TaskDriver
 {
-    private static final int      HELP_DESC_PAD_WIDTH = 5;
-    private static final int      HELP_INDENT_WIDTH   = 3;
-    private static final int      HELP_LINE_WIDTH     = 100;
+    private static final int    HELP_DESC_PAD_WIDTH = 5;
+    private static final int    HELP_INDENT_WIDTH   = 3;
+    private static final int    HELP_LINE_WIDTH     = 100;
 
-    private static final Logger   LOG                 = LoggerFactory.getLogger(CmdlineAdapter.class);
+    private static final Logger LOG                 = LoggerFactory.getLogger(TaskDriver.class);
 
-    private final Options         _options            = new Options();
-    private final CmdlineTaskMap  _taskMap            = new CmdlineTaskMap();
-    private final CmdlineTaskArgs _taskArgs           = new CmdlineTaskArgs();
-    private final String          _version;
-    private final String          _specTitle;
-    private final String          _implTitle;
-    private CmdlineTask           _task               = null;
+    private final Options       _options            = new Options();
+    private final TaskDriverMap _taskMap            = new TaskDriverMap();
+    private final String        _version;
+    private final String        _specTitle;
+    private final String        _implTitle;
+    private TaskDefinition         _task               = null;
 
-    protected CmdlineAdapter()
+    protected TaskDriver()
     {
-        _options.addOption("h", "help", false, "print this message");
-        _options.addOption("d", "debug", false, "turn on debug messages");
+        addOption("help", "print this message", "h", false);
+        addOption("debug", "turn on debug messages", "d", false);
 
         // Descriptions are read from the JAR manifest. If there is not JAR then this will not work.
         Package _package = getClass().getPackage();
@@ -58,14 +59,14 @@ public abstract class CmdlineAdapter
         this._implTitle = coalesce(_package.getImplementationTitle(), "<Implementation-Title>");
     }
 
-    protected void addOption(String _opt, String _longOpt, boolean _hasArg, String _desc)
+    protected void addOption(String _longOpt, String _desc, String _opt, boolean _hasArg)
     {
         _options.addOption(_opt, _longOpt, _hasArg, _desc);
     }
 
-    protected void addTask(Enum<?> _enum, String _arg, String _desc)
+    protected TaskDefinition addTask(Enum<?> _enum, String _desc)
     {
-        _taskMap.add(_enum, _arg, _desc);
+        return _taskMap.add(_enum, _desc);
     }
 
     /**
@@ -73,7 +74,7 @@ public abstract class CmdlineAdapter
      * @param _cmdArgs
      * @throws Exception
      */
-    protected abstract void handleGetArgs(CmdlineArgs _cmdArgs)
+    protected abstract void handleGetArgs(TaskDriverOptions _cmdArgs)
             throws Exception;
 
     /**
@@ -82,7 +83,7 @@ public abstract class CmdlineAdapter
      * @param _args Task arguments
      * @throws Exception
      */
-    protected abstract void handleDoTask(Enum<?> _task, CmdlineTaskArgs _args)
+    protected abstract void handleDoTask(TaskDefinition _task)
             throws Exception;
 
     /**
@@ -102,9 +103,8 @@ public abstract class CmdlineAdapter
         try
         {
             parseArgs(_args);
-
             LOG.debug("* Starting task: <{}>", _task);
-            handleDoTask(this._task.getEnum(), this._taskArgs);
+            handleDoTask(_task);
         }
         catch(ParseException _ex)
         {
@@ -149,19 +149,19 @@ public abstract class CmdlineAdapter
     {
         CommandLineParser _parser = new DefaultParser();
         CommandLine _cmd = _parser.parse(_options, _args);
-        _taskArgs.addAll(_cmd.getArgList());
 
         if(_cmd.hasOption("d"))
         {
-            setPackageDebug(CmdlineAdapter.class.getPackage());
+            setPackageDebug(TaskDriver.class.getPackage());
         }
 
         String _argDesc = Arrays.asList(_args).stream()
-                .sorted().collect(Collectors.joining(",", "(", ")"));
+                .sorted()
+                .collect(Collectors.joining(",", "(", ")"));
 
         LOG.debug("ARGS: {}", _argDesc);
 
-        CmdlineArgs _cmdArgs = new CmdlineArgs(_options, _cmd);
+        TaskDriverOptions _cmdArgs = new TaskDriverOptions(_options, _cmd);
         if(_cmdArgs.hasOption("h") || _cmd.getArgList().size() == 0)
         {
             StringWriter _sw = new StringWriter();
@@ -175,8 +175,8 @@ public abstract class CmdlineAdapter
 
         // copy args to the queue
         // some of these args will be processed by the task
-        this._task = _taskArgs.parseTask();
-        CmdlineAdapter.LOG.debug("OPTION: task = <{}>", _task.getEnum());
+        this._task = parseTask(_cmd.getArgList());
+        TaskDriver.LOG.debug("OPTION: task = <{}>", _task.getEnum());
     }
 
     private void printHelp(PrintWriter _pw)
@@ -210,72 +210,28 @@ public abstract class CmdlineAdapter
         return _arg2;
     }
 
-    protected class CmdlineTaskArgs extends ArrayDeque<String>
+    private TaskDefinition parseTask(List<String> _args)
+            throws MissingArgumentException
     {
-        private static final long serialVersionUID = 1L;
-
-        /**
-         * Get the next parameter (not option) that was passed on the command
-         * line.
-         * @param _paramName Paramter name used for logging and error
-         *        descriptions.
-         * @return
-         * @throws MissingArgumentException
-         */
-        public String takeArg(String _paramName)
-                throws MissingArgumentException
+        ArrayDeque<String> _taskArgs = new ArrayDeque<String>(_args);
+        String _taskStr;
+        try
         {
-            String _paramVal = this.pollFirst();
-            if(_paramVal == null)
-            {
-                throw new MissingArgumentException("Missing parameter: " + _paramName);
-            }
-            LOG.debug("ARG: {} = <{}>", _paramName, _paramVal);
-            return _paramVal;
+            _taskStr = _taskArgs.removeFirst();
+        }
+        catch(NoSuchElementException _ex)
+        {
+            throw new MissingArgumentException("Missing task argument: " + _taskMap.getSummary());
         }
 
-        /**
-         * Get the next parameter (not option) that was passed on the command
-         * line as an integer.
-         * @param _paramName
-         * @return
-         * @throws Exception
-         */
-        public int takeArgInt(String _paramName)
-                throws Exception
+        TaskDefinition _task = _taskMap.get(_taskStr);
+        if(_task == null)
         {
-            String _argStr = takeArg(_paramName);
-            int _argInt;
-
-            try
-            {
-                _argInt = Integer.parseUnsignedInt(_argStr);
-            }
-            catch(NumberFormatException _ex)
-            {
-                throw new Exception(
-                        String.format("Could not convert %s to integer: %s", _paramName, _argStr), _ex);
-            }
-            return _argInt;
+            throw new MissingArgumentException(
+                    String.format("<%s> must be one one of %s. ", _taskStr, _taskMap.getSummary()));
         }
 
-        private CmdlineTask parseTask()
-                throws MissingArgumentException
-        {
-            String _taskStr = this.pollFirst();
-            if(_taskStr == null)
-            {
-                throw new MissingArgumentException("Missing task argument: " + _taskMap.getSummary());
-            }
-
-            CmdlineTask _task = _taskMap.get(_taskStr);
-            if(_task == null)
-            {
-                throw new MissingArgumentException(
-                        String.format("<%s> must be one one of %s. ", _taskStr, _taskMap.getSummary()));
-            }
-
-            return _task;
-        }
+        _task.setArgs(_taskArgs);
+        return _task;
     }
 }

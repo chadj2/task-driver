@@ -1,5 +1,5 @@
 /**
- * CMD ADAPTER - Command Line Task Driver
+ * TASK DRIVER - Command-line Task Framework
  *
  *  Copyright 2016 by Chad Juliano
  *
@@ -9,18 +9,19 @@
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
 
-package org.oracp.cmd;
+package org.taskdriver;
 
 import java.io.PrintWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.taskdriver.TaskDriverMap.TaskDefinition;
 
-public class CmdlineDemo extends CmdlineAdapter
+public class TaskDriverDemo extends TaskDriver
 {
-    private static final Logger LOG = LoggerFactory.getLogger(CmdlineDemo.class);
-    private String _optionalOpt = null;
-    private String _requiredOpt = null;
+    private static final Logger LOG          = LoggerFactory.getLogger(TaskDriverDemo.class);
+    private String              _optionalOpt = null;
+    private String              _requiredOpt = null;
 
     enum DemoTaskEnum
     {
@@ -29,15 +30,17 @@ public class CmdlineDemo extends CmdlineAdapter
         INT_PARAM;
     };
 
-    public CmdlineDemo()
+    public TaskDriverDemo()
     {
-        addOption("v", "verbose", false, "Verbose mode. (show request/response message)");
-        addOption("o", "optional", true, "Optional Option");
-        addOption("r", "required", true, "Required Option");
+        addOption("verbose", "Verbose mode. (show request/response message)", "v", false);
+        addOption("optional", "Optional Option", "o", true);
+        addOption("required", "Required Option", "r", true);
 
-        addTask(DemoTaskEnum.NO_PARAM, null, "Task with no params.");
-        addTask(DemoTaskEnum.STR_PARAM, "PARAM-STR", "Task with string param.");
-        addTask(DemoTaskEnum.INT_PARAM, "PARAM-INT", "Task with integer param.");
+        addTask(DemoTaskEnum.NO_PARAM, "Task with no params.");
+        addTask(DemoTaskEnum.STR_PARAM, "Task with string param.")
+            .addArg("PARAM-STR");
+        addTask(DemoTaskEnum.INT_PARAM, "Task with integer param.")
+            .addArg("PARAM-INT");
     }
 
     @Override
@@ -48,12 +51,18 @@ public class CmdlineDemo extends CmdlineAdapter
     }
 
     @Override
-    protected void handleGetArgs(CmdlineArgs _cmdArgs)
+    protected void handleGetArgs(TaskDriverOptions _cmdArgs)
             throws Exception
     {
+        if(_cmdArgs.hasOption("d"))
+        {
+            // add additional loggers here
+        }
+
         if(_cmdArgs.hasOption("v"))
         {
-            setPackageDebug(CmdlineDemo.class.getPackage());
+            setPackageDebug(TaskDriverDemo.class.getPackage());
+            // add additional loggers here
         }
 
         _optionalOpt = _cmdArgs.getOption("o", "default-val");
@@ -61,25 +70,25 @@ public class CmdlineDemo extends CmdlineAdapter
     }
 
     @Override
-    protected void handleDoTask(Enum<?> _task, CmdlineTaskArgs _args)
+    protected void handleDoTask(TaskDefinition _task)
             throws Exception
     {
         LOG.info("Required Option Value: <{}>", _requiredOpt);
         LOG.info("Optional Option Value: <{}>", _optionalOpt);
 
-        switch((DemoTaskEnum)_task)
+        switch((DemoTaskEnum)_task.getEnum())
         {
             case NO_PARAM:
                 LOG.info("Task {} was called.", _task);
                 break;
 
             case STR_PARAM:
-                String _paramStr = _args.takeArg("PARAM-STR");
+                String _paramStr = _task.takeArg();
                 LOG.info("Task {} was called with: <{}>", _task, _paramStr);
                 break;
 
             case INT_PARAM:
-                int _paramInt = _args.takeArgInt("PARAM-INT");
+                int _paramInt = _task.takeArgInt();
                 LOG.info("Task {} was called with: <{}>", _task, _paramInt);
                 break;
 
@@ -96,7 +105,7 @@ public class CmdlineDemo extends CmdlineAdapter
     {
         try
         {
-            new CmdlineDemo().run(_args);
+            new TaskDriverDemo().run(_args);
         }
         catch(Exception _ex)
         {

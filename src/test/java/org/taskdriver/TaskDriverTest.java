@@ -1,5 +1,5 @@
 /**
- * CMD ADAPTER - Command Line Task Driver
+ * TASK DRIVER - Command-line Task Framework
  *
  *  Copyright 2016 by Chad Juliano
  *
@@ -9,9 +9,8 @@
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
 
-package org.oracp.cmd;
+package org.taskdriver;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
@@ -21,13 +20,13 @@ import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.taskdriver.TaskDriverDemo;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class CmdlineTest
+public class TaskDriverTest
 {
     @Before
     public void initialize()
-            throws UnknownHostException
     {}
 
     @Test(expected = ParseException.class)
@@ -91,7 +90,7 @@ public class CmdlineTest
         //_argList.add(0, "--verbose");
         _argList.addAll(0, Arrays.asList("--required", "reqired-opt-val"));
 
-        CmdlineDemo _testClass = new CmdlineDemo();
+        TaskDriverDemo _testClass = new TaskDriverDemo();
         _testClass.run(_argList.toArray(new String[0]));
     }
 

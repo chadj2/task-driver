@@ -9,7 +9,7 @@
         </encoder>
     </appender>
 
-    <logger name="org.oracp.cmd" level="INFO"/>
+    <logger name="org.taskdriver" level="INFO"/>
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

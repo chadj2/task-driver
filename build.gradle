@@ -1,5 +1,5 @@
 /**
- * CMD ADAPTER - Command Line Task Driver
+ * TASK DRIVER - Command-line Task Framework
  *
  *  Copyright 2016 by Chad Juliano
  *
@@ -16,12 +16,13 @@ plugins {
 }
 
 repositories {
-    jcenter()
     mavenLocal()
+    jcenter()
 }
 
 // include tasks and configuration to bundle this project as a launch4j executable.
-apply from: 'launch4j.gradle'
+apply from: 'dist/launch4j.gradle'
+apply from: 'dist/debug.gradle'
 
 dependencies {
 
@@ -30,47 +31,65 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
 
-    testCompile 'junit:junit:4.12'
+    testCompile group: 'junit', name: 'junit', version: '4.12'
 
-    runtime group: 'org.slf4j', name: 'log4j-over-slf4j', version: '1.7.22'
+    // contains the logback-test.xml file needed on the classpath
+    testRuntime files(project.loggingDir)
+
+    // Note: This is just a placeholder so that launch4j will  add ./lib/config to its classpath.
+    runtime files("${project.distDir}/config")
 }
 
-// the below block determines the files that get copied into the distribution.
-// We create a new distribution called 'top' because 'main' has a different organization.
-// https://docs.gradle.org/current/userguide/distribution_plugin.html
+/**
+ * The below block determines the files that get copied into the distribution.
+ * We create a new distribution called 'launch4j' because 'main' has a different organization.
+ * https://docs.gradle.org/current/userguide/distribution_plugin.html
+ */
 distributions {
-    top {
-        baseName = project.name
+    launch4j {
         contents {
-            from(projectDir) { include 'README.md' }
-            into('lib') {
-                from(configurations.runtime.files)
-                from(jar.outputs.files)
+            from(project.projectDir) {
+            	include 'LICENSE.*'
             }
-            into('lib/config') {
-            	from(sourceSets.main.resources.files) { include 'logback.xml' }
+            from(projectDir) {
+            	include 'README.md'
+            }
+            into('lib') {
+                from(configurations.runtime.files) { exclude 'config' }
+                from(jar.outputs.files)
             }
         }
     }
 }
 
-// Junit test plugin
-// https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.Test.html
+/**
+ * Junit test plugin
+ * https://docs.gradle.org/current/dsl/org.gradle.api.tasks.testing.Test.html
+ */
 test {
     testLogging {
         showStandardStreams true
     }
+
+    // listen to standard out and standard error of the test JVM(s)
+    afterTest { descriptor, result ->
+       logger.lifecycle("${descriptor} result: ${result}")
+    }
 }
 
-// from github-info plugin. This adds details to the pom.
-// https://github.com/xvik/gradle-github-info-plugin
+/**
+ * from github-info plugin. This adds details to the pom.
+ * https://github.com/xvik/gradle-github-info-plugin
+ */
 github {
     user 'chadj2'
     license 'LGPLv3'
 }
 
-//from pom plugin. Simplifies pom generation.
-// https://github.com/xvik/gradle-pom-plugin
+/**
+ * from POM plugin. Simplifies pom generation.
+ * https://github.com/xvik/gradle-pom-plugin
+ */
 pom {
     developers {
         developer {
@@ -81,8 +100,10 @@ pom {
     }
 }
 
-// from the maven-publish plugin
-// https://docs.gradle.org/current/userguide/maven_plugin.html
+/**
+ * From the maven-publish plugin.
+ * https://docs.gradle.org/current/userguide/maven_plugin.html
+ */
 publishing {
     publications {
         mavenJava(MavenPublication) {
