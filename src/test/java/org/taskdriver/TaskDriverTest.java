@@ -15,22 +15,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-import org.taskdriver.TaskDriverDemo;
+import org.taskdriver.demo.TaskDriverDemo;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TaskDriverTest
 {
-    @Before
-    public void initialize()
-    {}
-
     @Test(expected = ParseException.class)
-    public void t01_testEmpty()
+    public void t001_testEmpty()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -38,7 +32,7 @@ public class TaskDriverTest
     }
 
     @Test(expected = ParseException.class)
-    public void t02_help()
+    public void t002_help()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -48,7 +42,7 @@ public class TaskDriverTest
     }
 
     @Test()
-    public void t03_taskNoParam()
+    public void t010_taskNoParam()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -57,7 +51,17 @@ public class TaskDriverTest
     }
 
     @Test()
-    public void t04_taskStrParam()
+    public void t011_taskNoParamVerbose()
+            throws Exception
+    {
+        ArrayList<String> _argList = new ArrayList<>();
+        _argList.add("--verbose");
+        _argList.addAll(Arrays.asList("no-param"));
+        execTest(_argList);
+    }
+
+    @Test()
+    public void t020_taskStrParam()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -66,7 +70,7 @@ public class TaskDriverTest
     }
 
     @Test()
-    public void t05_taskIntParam()
+    public void t030_taskIntParam()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -74,8 +78,27 @@ public class TaskDriverTest
         execTest(_argList);
     }
 
+    @Test(expected = ParseException.class)
+    public void t031_taskIntParamError()
+            throws Exception
+    {
+        ArrayList<String> _argList = new ArrayList<>();
+        _argList.addAll(Arrays.asList("int-param", "9999x"));
+        execTest(_argList);
+    }
+
+    @Test(expected = ParseException.class)
+    public void t032_taskIntParamErrorDebug()
+            throws Exception
+    {
+        ArrayList<String> _argList = new ArrayList<>();
+        _argList.add("--debug");
+        _argList.addAll(Arrays.asList("int-param", "9999x"));
+        execTest(_argList);
+    }
+
     @Test()
-    public void t06_optionalOption()
+    public void t040_optionalOption()
             throws Exception
     {
         ArrayList<String> _argList = new ArrayList<>();
@@ -93,8 +116,4 @@ public class TaskDriverTest
         TaskDriverDemo _testClass = new TaskDriverDemo();
         _testClass.run(_argList.toArray(new String[0]));
     }
-
-    @After
-    public void cleanup()
-    {}
 }

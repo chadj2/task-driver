@@ -9,15 +9,17 @@
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
 
-package org.taskdriver;
+package org.taskdriver.demo;
 
 import java.io.PrintWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.taskdriver.TaskDriverMap.TaskDefinition;
+import org.taskdriver.TaskDefinition;
+import org.taskdriver.TaskDriver;
+import org.taskdriver.TaskDriverOptions;
 
-public class TaskDriverDemo extends TaskDriver
+public class TaskDriverDemo extends TaskDriver<TaskDriverDemo.DemoTaskEnum>
 {
     private static final Logger LOG          = LoggerFactory.getLogger(TaskDriverDemo.class);
     private String              _optionalOpt = null;
@@ -38,15 +40,15 @@ public class TaskDriverDemo extends TaskDriver
 
         addTask(DemoTaskEnum.NO_PARAM, "Task with no params.");
         addTask(DemoTaskEnum.STR_PARAM, "Task with string param.")
-            .addArg("PARAM-STR");
+                .addArg("PARAM-STR");
         addTask(DemoTaskEnum.INT_PARAM, "Task with integer param.")
-            .addArg("PARAM-INT");
+                .addArg("PARAM-INT");
     }
 
     @Override
     protected void printHelpFooter(PrintWriter _pw)
     {
-        _pw.println("This program is an example implimentation of CmdlineAdapter.");
+        _pw.println("This program is an example implimentation of TaskDriver.");
         _pw.println("Contact Chad Juliano<chad.jualiano@oracle.com> for feedback or assistance.");
     }
 
@@ -70,25 +72,28 @@ public class TaskDriverDemo extends TaskDriver
     }
 
     @Override
-    protected void handleDoTask(TaskDefinition _task)
+    protected void handleDoTask(DemoTaskEnum _task, TaskDefinition<DemoTaskEnum> _taskDef)
             throws Exception
     {
         LOG.info("Required Option Value: <{}>", _requiredOpt);
         LOG.info("Optional Option Value: <{}>", _optionalOpt);
 
-        switch((DemoTaskEnum)_task.getEnum())
+        // only visible in verbose mode
+        LOG.debug("Verbose Logging is turned on.");
+
+        switch(_task)
         {
             case NO_PARAM:
                 LOG.info("Task {} was called.", _task);
                 break;
 
             case STR_PARAM:
-                String _paramStr = _task.takeArg();
+                String _paramStr = _taskDef.takeArg();
                 LOG.info("Task {} was called with: <{}>", _task, _paramStr);
                 break;
 
             case INT_PARAM:
-                int _paramInt = _task.takeArgInt();
+                int _paramInt = _taskDef.takeArgInt();
                 LOG.info("Task {} was called with: <{}>", _task, _paramInt);
                 break;
 

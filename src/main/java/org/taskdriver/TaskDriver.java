@@ -28,24 +28,24 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.taskdriver.TaskDriverMap.TaskDefinition;
 
 import ch.qos.logback.classic.Level;
 
-public abstract class TaskDriver
+public abstract class TaskDriver<E extends Enum<E>>
 {
-    private static final int    HELP_DESC_PAD_WIDTH = 5;
-    private static final int    HELP_INDENT_WIDTH   = 3;
-    private static final int    HELP_LINE_WIDTH     = 100;
+    private static final Logger    LOG                 = LoggerFactory.getLogger(TaskDriver.class);
 
-    private static final Logger LOG                 = LoggerFactory.getLogger(TaskDriver.class);
+    private static final int       HELP_DESC_PAD_WIDTH = 5;
+    private static final int       HELP_INDENT_WIDTH   = 3;
+    private static final int       HELP_LINE_WIDTH     = 100;
 
-    private final Options       _options            = new Options();
-    private final TaskDriverMap _taskMap            = new TaskDriverMap();
-    private final String        _version;
-    private final String        _specTitle;
-    private final String        _implTitle;
-    private TaskDefinition         _task               = null;
+    private final Options          _optionDefs         = new Options();
+    private final TaskDriverMap<E> _taskDefs           = new TaskDriverMap<E>();
+    private TaskDefinition<E>      _task               = null;
+
+    private final String           _version;
+    private final String           _specTitle;
+    private final String           _implTitle;
 
     protected TaskDriver()
     {
@@ -61,12 +61,12 @@ public abstract class TaskDriver
 
     protected void addOption(String _longOpt, String _desc, String _opt, boolean _hasArg)
     {
-        _options.addOption(_opt, _longOpt, _hasArg, _desc);
+        _optionDefs.addOption(_opt, _longOpt, _hasArg, _desc);
     }
 
-    protected TaskDefinition addTask(Enum<?> _enum, String _desc)
+    protected TaskDefinition<E> addTask(E _enum, String _desc)
     {
-        return _taskMap.add(_enum, _desc);
+        return _taskDefs.add(_enum, _desc);
     }
 
     /**
@@ -83,7 +83,7 @@ public abstract class TaskDriver
      * @param _args Task arguments
      * @throws Exception
      */
-    protected abstract void handleDoTask(TaskDefinition _task)
+    protected abstract void handleDoTask(E _task, TaskDefinition<E> _taskDef)
             throws Exception;
 
     /**
@@ -103,8 +103,9 @@ public abstract class TaskDriver
         try
         {
             parseArgs(_args);
+
             LOG.debug("* Starting task: <{}>", _task);
-            handleDoTask(_task);
+            handleDoTask(_task.getEnum(), _task);
         }
         catch(ParseException _ex)
         {
@@ -147,8 +148,30 @@ public abstract class TaskDriver
     private void parseArgs(String[] _args)
             throws Exception
     {
+        // hook for subclass
+        CommandLine _cmd = parseOptions(_args);
+
+        TaskDriverOptions _cmdArgs = new TaskDriverOptions(_optionDefs, _cmd);
+        handleGetArgs(_cmdArgs);
+
+        // copy args to the queue
+        // some of these args will be processed by the task
+        List<String> _argList = _cmd.getArgList();
+        parseTask(_argList);
+    }
+
+    /**
+     * Default option parse.
+     * @param _args
+     * @param _cmd
+     * @return
+     * @throws ParseException
+     */
+    private CommandLine parseOptions(String[] _args)
+            throws ParseException
+    {
         CommandLineParser _parser = new DefaultParser();
-        CommandLine _cmd = _parser.parse(_options, _args);
+        CommandLine _cmd = _parser.parse(_optionDefs, _args);
 
         if(_cmd.hasOption("d"))
         {
@@ -156,13 +179,11 @@ public abstract class TaskDriver
         }
 
         String _argDesc = Arrays.asList(_args).stream()
-                .sorted()
-                .collect(Collectors.joining(",", "(", ")"));
+                .collect(Collectors.joining(") (", "(", ")"));
 
         LOG.debug("ARGS: {}", _argDesc);
 
-        TaskDriverOptions _cmdArgs = new TaskDriverOptions(_options, _cmd);
-        if(_cmdArgs.hasOption("h") || _cmd.getArgList().size() == 0)
+        if(_cmd.hasOption("h") || _cmd.getArgList().size() == 0)
         {
             StringWriter _sw = new StringWriter();
             printHelp(new PrintWriter(_sw));
@@ -170,24 +191,43 @@ public abstract class TaskDriver
             throw new ParseException("Help option requested");
         }
 
-        // hook for subclass
-        handleGetArgs(_cmdArgs);
+        return _cmd;
+    }
 
-        // copy args to the queue
-        // some of these args will be processed by the task
-        this._task = parseTask(_cmd.getArgList());
+    private void parseTask(List<String> _args)
+            throws MissingArgumentException
+    {
+        ArrayDeque<String> _taskArgs = new ArrayDeque<String>(_args);
+        String _taskStr;
+        try
+        {
+            _taskStr = _taskArgs.removeFirst();
+        }
+        catch(NoSuchElementException _ex)
+        {
+            throw new MissingArgumentException("Missing task argument: " + _taskDefs.getSummary());
+        }
+
+        this._task = _taskDefs.get(_taskStr);
+        if(_task == null)
+        {
+            throw new MissingArgumentException(
+                    String.format("<%s> must be one one of %s. ", _taskStr, _taskDefs.getSummary()));
+        }
+
+        _task.setArgs(_taskArgs);
         TaskDriver.LOG.debug("OPTION: task = <{}>", _task.getEnum());
     }
 
     private void printHelp(PrintWriter _pw)
     {
-        final String _cmdSyntax = String.format("%s [OPTIONS] %s", this._implTitle, _taskMap.getSummary());
+        final String _cmdSyntax = String.format("%s [OPTIONS] %s", this._implTitle, _taskDefs.getSummary());
 
         HelpFormatter _help = new HelpFormatter();
         _help.printHelp(_pw,
                 HELP_LINE_WIDTH,
                 _cmdSyntax, null,
-                this._options,
+                this._optionDefs,
                 HELP_INDENT_WIDTH,
                 HELP_DESC_PAD_WIDTH,
                 null, false);
@@ -196,7 +236,7 @@ public abstract class TaskDriver
         _pw.println(String.format("%s (v%s)", this._specTitle, this._version));
         _pw.println();
         _pw.println("You must choose one of the following tasks:");
-        _pw.println(_taskMap.getDetails());
+        _pw.println(_taskDefs.getDetails());
         _pw.println();
         printHelpFooter(_pw);
     }
@@ -208,30 +248,5 @@ public abstract class TaskDriver
             return _arg1;
         }
         return _arg2;
-    }
-
-    private TaskDefinition parseTask(List<String> _args)
-            throws MissingArgumentException
-    {
-        ArrayDeque<String> _taskArgs = new ArrayDeque<String>(_args);
-        String _taskStr;
-        try
-        {
-            _taskStr = _taskArgs.removeFirst();
-        }
-        catch(NoSuchElementException _ex)
-        {
-            throw new MissingArgumentException("Missing task argument: " + _taskMap.getSummary());
-        }
-
-        TaskDefinition _task = _taskMap.get(_taskStr);
-        if(_task == null)
-        {
-            throw new MissingArgumentException(
-                    String.format("<%s> must be one one of %s. ", _taskStr, _taskMap.getSummary()));
-        }
-
-        _task.setArgs(_taskArgs);
-        return _task;
     }
 }
