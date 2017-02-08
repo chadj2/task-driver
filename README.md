@@ -1,5 +1,8 @@
 # TASK DRIVER - Command-line Task Framework
 
+[ ![Download](https://api.bintray.com/packages/chadj2/cmd-utils/task-driver/images/download.svg) ][BINTRAY-LATEST]
+[BINTRAY-LATEST]: <https://bintray.com/chadj2/cmd-utils/task-driver/_latestVersion>
+
 The Task Driver provides a framework that simplifies the process of building high quality command line based
 applications. Highlights include:
 
@@ -14,16 +17,22 @@ applications. Highlights include:
 
 - [TaskDriverDemo](#taskdriverdemo)
 - [Implementing](#implementing)
-    - [Build Setup](#build-setup)
+    - [Gradle Setup](#gradle-setup)
     - [Task Configuration](#task-configuration)
     - [Task Invocation](#task-invocation)
     - [Controlling Output](#controlling-output)
-- [Release Notes](#release-notes)
 - [Building](#building)
+- [See Also](#see-also)
 - [Author](#author)
 - [License](#license)
 
 ## TaskDriverDemo
+
+You can download a binary distribution from the Bintray *download button* at the top of this page. From the
+Bintray page scroll down and you will see a **zip** file under the **Downloads** heading.
+
+*Note: The binary distribution is for demonstration purposes only. You should implement the library as a Maven
+dependency.*
 
 An example program **TaskDriverDemo** is included as a template for building new programs. Running the program gives the
 following output.
@@ -96,11 +105,11 @@ org.apache.commons.cli.ParseException: Could not convert PARAM-INT to integer: a
 
 *Note: This program makes of use of Java 8 streams and requires **JRE 1.8.***
 
-### Build Setup
+### Gradle Setup
 
-Create a new project using the provided **build.gradle** and **gradle.properties** as a template. The properties file
-contains parameters that get compiled into the JAR manifest. These parameters are retrieved from the JAR when
-generating the help screen.
+Create a new Gradle project using the provided **build.gradle** and **gradle.properties** as a template.
+The properties file contains parameters that get compiled into the JAR manifest. These parameters are retrieved
+from the JAR when generating the help screen.
 
 When running JUnit tests placeholder values will be used if there is no JAR file. You can run target
 **installLaunch4jDist** and execute the program from **build/install/task-driver** to see the final output.
@@ -122,8 +131,16 @@ copyright       = 2017
 programIcon     = dist/cmd.ico
 ```
 
-The new project can reference the task-driver library from a Maven repository:
+The new project can reference the task-driver library from the [Bintray][BINTRAY] repository. Add the following
+repository and dependency to your Gradle script.
+
+[BINTRAY]: <https://bintray.com/chadj2/cmd-utils/task-driver>
+
 ```gradle
+maven {
+    url  'http://dl.bintray.com/chadj2/cmd-utils'
+}
+
 dependencies {
 
     // this will import slf4j libraries
@@ -276,9 +293,9 @@ Important Gradle targets are:
 * **installLaunch4jDist**: Create the distribution in **./build/install/task-driver**.
 * **publishMavenJavaPublicationToMavenLocal**: Publish to local Maven repository.
 
-## Release Notes
+## See Also
 
-- **1.0.0:** Initial Release
+* [ORACP](https://github.com/chadj2/oracp/): Oracle DB file transfer utility that uses Task Driver.
 
 ## Author
 
@@ -289,8 +306,8 @@ Important Gradle targets are:
 This program is licensed under [GNU Lesser General Public License v3.0 only][LGPL-3.0].
 Some rights reserved. See [LICENSE][].
 
-![](images/lgplv3b-72.png "LGPL-3.0")
-![](images/spdx-72.png "SPDX")
+[ ![](images/lgplv3b-72.png "LGPL-3.0") ][LGPL-3.0]
+[ ![](images/spdx-72.png "SPDX") ][LGPL-3.0]
 
 [LGPL-3.0]: <https://spdx.org/licenses/LGPL-3.0>
 [LICENSE]: <LICENSE.md>
