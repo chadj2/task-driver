@@ -1,10 +1,9 @@
-/**
+/*
  * TASK DRIVER - Command-line Task Framework
+ * Copyright 2016 by Chad Juliano
  *
- *  Copyright 2016 by Chad Juliano
- *
- *  Licensed under GNU Lesser General Public License v3.0 only.
- *  Some rights reserved. See LICENSE.
+ * Licensed under GNU Lesser General Public License v3.0 only. Some rights
+ * reserved. See LICENSE.
  *
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
@@ -31,6 +30,11 @@ import org.slf4j.LoggerFactory;
 
 import ch.qos.logback.classic.Level;
 
+/**
+ * This class should be extended to implement a task driven process.
+ * @author Chad Juliano
+ * @param <E> Enumeration of supported tasks.
+ */
 public abstract class TaskDriver<E extends Enum<E>>
 {
     private static final Logger    LOG                 = LoggerFactory.getLogger(TaskDriver.class);
@@ -47,6 +51,9 @@ public abstract class TaskDriver<E extends Enum<E>>
     private final String           _specTitle;
     private final String           _implTitle;
 
+    /**
+     * Constructor
+     */
     protected TaskDriver()
     {
         addOption("help", "print this message", "h", false);
@@ -59,11 +66,24 @@ public abstract class TaskDriver<E extends Enum<E>>
         this._implTitle = coalesce(_package.getImplementationTitle(), "<Implementation-Title>");
     }
 
+    /**
+     * Add a definition for a command line option.
+     * @param _longOpt Multi-character name
+     * @param _desc Description used
+     * @param _opt Single character name.
+     * @param _hasArg True if an argument follows the parameter.
+     */
     protected void addOption(String _longOpt, String _desc, String _opt, boolean _hasArg)
     {
         _optionDefs.addOption(_opt, _longOpt, _hasArg, _desc);
     }
 
+    /**
+     * Add a definition for a task.
+     * @param _enum One of the tasks defined in the task enum.
+     * @param _desc Task description
+     * @return
+     */
     protected TaskDefinition<E> addTask(E _enum, String _desc)
     {
         return _taskDefs.add(_enum, _desc);
@@ -194,6 +214,11 @@ public abstract class TaskDriver<E extends Enum<E>>
         return _cmd;
     }
 
+    /**
+     * Determine the task definition from the arguments.
+     * @param _args
+     * @throws MissingArgumentException
+     */
     private void parseTask(List<String> _args)
             throws MissingArgumentException
     {
@@ -219,6 +244,10 @@ public abstract class TaskDriver<E extends Enum<E>>
         TaskDriver.LOG.debug("OPTION: task = <{}>", _task.getEnum());
     }
 
+    /**
+     * Print command line help.
+     * @param _pw
+     */
     private void printHelp(PrintWriter _pw)
     {
         final String _cmdSyntax = String.format("%s [OPTIONS] %s", this._implTitle, _taskDefs.getSummary());
@@ -241,6 +270,11 @@ public abstract class TaskDriver<E extends Enum<E>>
         printHelpFooter(_pw);
     }
 
+    /**
+     * @param _arg1
+     * @param _arg2
+     * @return
+     */
     private static String coalesce(String _arg1, String _arg2)
     {
         if(_arg1 != null)

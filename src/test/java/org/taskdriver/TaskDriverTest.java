@@ -1,10 +1,10 @@
-/**
+/*
  * TASK DRIVER - Command-line Task Framework
  *
- *  Copyright 2016 by Chad Juliano
+ * Copyright 2016 by Chad Juliano
  *
- *  Licensed under GNU Lesser General Public License v3.0 only.
- *  Some rights reserved. See LICENSE.
+ * Licensed under GNU Lesser General Public License v3.0 only. Some rights
+ * reserved. See LICENSE.
  *
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */

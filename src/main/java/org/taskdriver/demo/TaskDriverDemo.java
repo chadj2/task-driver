@@ -1,10 +1,10 @@
-/**
+/*
  * TASK DRIVER - Command-line Task Framework
  *
- *  Copyright 2016 by Chad Juliano
+ * Copyright 2016 by Chad Juliano
  *
- *  Licensed under GNU Lesser General Public License v3.0 only.
- *  Some rights reserved. See LICENSE.
+ * Licensed under GNU Lesser General Public License v3.0 only. Some rights
+ * reserved. See LICENSE.
  *
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
@@ -19,12 +19,20 @@ import org.taskdriver.TaskDefinition;
 import org.taskdriver.TaskDriver;
 import org.taskdriver.TaskDriverOptions;
 
+/**
+ * Demonstration implementation of the TaskDriver.
+ * @author cjuliano
+ *
+ */
 public class TaskDriverDemo extends TaskDriver<TaskDriverDemo.DemoTaskEnum>
 {
     private static final Logger LOG          = LoggerFactory.getLogger(TaskDriverDemo.class);
     private String              _optionalOpt = null;
     private String              _requiredOpt = null;
 
+    /**
+     * Set of available tasks.
+     */
     enum DemoTaskEnum
     {
         NO_PARAM,
@@ -32,6 +40,9 @@ public class TaskDriverDemo extends TaskDriver<TaskDriverDemo.DemoTaskEnum>
         INT_PARAM;
     };
 
+    /**
+     * Constructor
+     */
     public TaskDriverDemo()
     {
         addOption("verbose", "Verbose mode. (show request/response message)", "v", false);
@@ -67,7 +78,7 @@ public class TaskDriverDemo extends TaskDriver<TaskDriverDemo.DemoTaskEnum>
             // add additional loggers here
         }
 
-        _optionalOpt = _cmdArgs.getOption("o", "default-val");
+        _optionalOpt = _cmdArgs.getOptionOrDefault("o", "default-val");
         _requiredOpt = _cmdArgs.getRequiredOption("r");
     }
 

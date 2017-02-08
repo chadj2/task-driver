@@ -1,10 +1,9 @@
-/**
+/*
  * TASK DRIVER - Command-line Task Framework
+ * Copyright 2016 by Chad Juliano
  *
- *  Copyright 2016 by Chad Juliano
- *
- *  Licensed under GNU Lesser General Public License v3.0 only.
- *  Some rights reserved. See LICENSE.
+ * Licensed under GNU Lesser General Public License v3.0 only. Some rights
+ * reserved. See LICENSE.
  *
  * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
  */
@@ -18,12 +17,22 @@ import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Contains the set of options not associated with tasks.
+ * @author cjuliano
+ *
+ */
 public class TaskDriverOptions
 {
     private static final Logger LOG = LoggerFactory.getLogger(TaskDriverOptions.class);
     private final Options       _options;
     private final CommandLine   _cmd;
 
+    /**
+     * Constructor
+     * @param _options Apache options descriptor.
+     * @param _cmd Apache options values.
+     */
     protected TaskDriverOptions(Options _options, CommandLine _cmd)
     {
         this._options = _options;
@@ -32,11 +41,11 @@ public class TaskDriverOptions
 
     /**
      * Get an option with a default if not specified.
-     * @param _opt
-     * @param _default
+     * @param _opt argument name.
+     * @param _default Default if option sis not passed.
      * @return
      */
-    public String getOption(String _opt, String _default)
+    public String getOptionOrDefault(String _opt, String _default)
     {
         String _value = _cmd.getOptionValue(_opt);
         Option _optObj = this._options.getOption(_opt);
@@ -53,7 +62,7 @@ public class TaskDriverOptions
     /**
      * Get a required option from the CommandLine and throw an exception if not
      * found.
-     * @param _opt
+     * @param _opt argument name
      * @return
      * @throws MissingArgumentException
      */
@@ -75,7 +84,8 @@ public class TaskDriverOptions
     }
 
     /**
-     * @param _opt
+     * Indicates if the option value was passed on the command line.
+     * @param _opt argument name
      * @return
      */
     public boolean hasOption(String _opt)

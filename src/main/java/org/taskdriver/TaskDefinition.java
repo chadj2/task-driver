@@ -1,3 +1,13 @@
+/*
+ * TASK DRIVER - Command-line Task Framework
+ * Copyright 2016 by Chad Juliano
+ *
+ * Licensed under GNU Lesser General Public License v3.0 only. Some rights
+ * reserved. See LICENSE.
+ *
+ * @license LGPL-3.0 <http://spdx.org/licenses/LGPL-3.0>
+ */
+
 package org.taskdriver;
 
 import java.util.AbstractMap;
@@ -13,6 +23,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Used in TaskMap
+ * @author cjuliano
+ * @param <E> Enumeration of supported tasks.
  */
 public class TaskDefinition<E extends Enum<E>>
 {
@@ -34,6 +46,11 @@ public class TaskDefinition<E extends Enum<E>>
         }
     }
 
+    /**
+     * Constructor
+     * @param _enum Enum assigned to the task.
+     * @param _description Task Description
+     */
     protected TaskDefinition(E _enum, String _description)
     {
         this._enum = _enum;
@@ -45,6 +62,11 @@ public class TaskDefinition<E extends Enum<E>>
         this._paramName = _taskStr;
     }
 
+    /**
+     * Add a definition for a required task argument.
+     * @param _argName
+     * @return
+     */
     public TaskDefinition<E> addArg(String _argName)
     {
         _argDefs.add(new TaskArgEntry(_argName, null));
@@ -52,6 +74,7 @@ public class TaskDefinition<E extends Enum<E>>
     }
 
     /**
+     * Associate task argument values with names.
      * @param _taskArgs
      */
     protected void setArgs(ArrayDeque<String> _taskArgs)
@@ -69,11 +92,19 @@ public class TaskDefinition<E extends Enum<E>>
         return this._paramName;
     }
 
+    /**
+     * Get the assigned task enum.
+     * @return
+     */
     public E getEnum()
     {
         return _enum;
     }
 
+    /**
+     * Get a description of the tasks and associated arguments.
+     * @return
+     */
     public String getUsage()
     {
         if(_argDefs.size() == 0)
@@ -86,11 +117,19 @@ public class TaskDefinition<E extends Enum<E>>
         return String.format("%s %s", _paramName, _argDesc);
     }
 
+    /**
+     * Get task description.
+     * @return
+     */
     public String getDescription()
     {
         return this._description;
     }
 
+    /**
+     * Get the format string used in the help screen.
+     * @return
+     */
     public String formatLine()
     {
         String _usageLine = StringUtils.rightPad(this.getUsage(), TASK_LINE_WIDTH, ".");
@@ -163,5 +202,4 @@ public class TaskDefinition<E extends Enum<E>>
         LOG.debug("ARG: {} = <{}>", _name, _value);
         return _argEntry;
     }
-
 }
