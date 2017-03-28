@@ -1,7 +1,5 @@
 # TASK DRIVER - Command-line Task Framework
-
-[ ![Download](https://api.bintray.com/packages/chadj2/cmd-utils/task-driver/images/download.svg) ][BINTRAY-LATEST]
-[BINTRAY-LATEST]: <https://bintray.com/chadj2/cmd-utils/task-driver/_latestVersion>
+[ ![Download](https://api.bintray.com/packages/chadj2/cmd-utils/task-driver/images/download.svg) ](https://bintray.com/chadj2/cmd-utils/task-driver/_latestVersion)
 
 The Task Driver provides a framework that simplifies the process of building high quality command line based
 applications. Highlights include:
